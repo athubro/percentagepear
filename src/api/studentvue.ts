@@ -26,25 +26,32 @@ export const MCPS_HOST = 'md-mcps-psv.edupoint.com'
 const API = '/api/v1/mobile/PXPWebServices'
 
 /* ── CORS proxy config ─────────────────────────────────────────────── */
-const CORS_PROXY = 'https://corsproxy.io/?'
+// Try multiple reliable CORS proxies for better resilience
+const PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://thingproxy.freeboard.io/fetch/',
+  'https://runkit.io/3kh0/cors-proxy/branches/master?url=',
+]
 
 /**
  * Build the full proxied URL for a given host + path.
- * In dev (npm run dev) you can set VITE_USE_LOCAL_PROXY=true in .env
- * to keep using the local /svue-proxy path instead.
+ * In dev, always use the local proxy. In prod, try the first proxy.
  */
 function buildUrl(host: string, path: string): string {
-  const useLocal =
-    typeof import.meta !== 'undefined' &&
-    (import.meta as any).env?.VITE_USE_LOCAL_PROXY === 'true'
+  const isLocal = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname === '::1' ||
+     window.location.port === '5173' ||
+     window.location.port === '4173')
 
-  if (useLocal) {
+  if (isLocal) {
     // Local dev-server proxy (original behaviour)
     return `/svue-proxy${path}`
   }
   // Production: route through CORS proxy
   const target = `https://${host}${path}`
-  return `${CORS_PROXY}${encodeURIComponent(target)}`
+  return `${PROXIES[0]}${encodeURIComponent(target)}`
 }
 /* ─────────────────────────────────────────────────────────────────── */
 
