@@ -42,8 +42,8 @@ function continueAsGuest() {
           <p>Save, compare, and restore multiple grade experiments per course.</p>
         </div>
         <div class="feature">
-          <strong>Attendance & Documents</strong>
-          <p>Pulls the attendance history and school documents StudentVUE exposes for your account.</p>
+          <strong>Attendance</strong>
+          <p>Pulls the attendance history StudentVUE exposes for your account.</p>
         </div>
         <div class="feature">
           <strong>Guest Mode</strong>

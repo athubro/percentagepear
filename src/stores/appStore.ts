@@ -10,7 +10,6 @@ import type {
   StudentInfo,
   ScheduleEntry,
   AttendanceRecord,
-  DocumentItem,
   CalculatedGrade,
 } from '../types';
 import {
@@ -18,7 +17,6 @@ import {
   cloneDemoCourses,
   DEMO_SCHEDULE,
   DEMO_ATTENDANCE,
-  DEMO_DOCUMENTS,
 } from '../data/demoData';
 import {
   calculateCourseGrade,
@@ -53,7 +51,6 @@ export const useAppStore = defineStore('app', () => {
   const courses = ref<Course[]>(cloneDemoCourses());
   const schedule = ref<ScheduleEntry[]>([...DEMO_SCHEDULE]);
   const attendance = ref<AttendanceRecord[]>([...DEMO_ATTENDANCE]);
-  const documents = ref<DocumentItem[]>([...DEMO_DOCUMENTS]);
   const scenarios = ref<SimulationScenario[]>([]);
   const activeScenarioId = ref<string | null>(null);
   /** Bump this whenever simulation data changes so computed grades always refresh */
@@ -109,7 +106,6 @@ export const useAppStore = defineStore('app', () => {
     courses.value = cloneDemoCourses();
     schedule.value = [...DEMO_SCHEDULE];
     attendance.value = [...DEMO_ATTENDANCE];
-    documents.value = [...DEMO_DOCUMENTS];
     scenarios.value = [];
     activeScenarioId.value = null;
     error.value = null;
@@ -356,7 +352,6 @@ export const useAppStore = defineStore('app', () => {
       courses.value = session.courses;
       schedule.value = session.schedule.length ? session.schedule : [];
       attendance.value = session.attendance;
-      documents.value = session.documents || [];
       scenarios.value = [];
       activeScenarioId.value = null;
       connectionHost.value = creds.host;
@@ -404,7 +399,6 @@ export const useAppStore = defineStore('app', () => {
     courses,
     schedule,
     attendance,
-    documents,
     scenarios,
     activeScenarioId,
     simVersion,

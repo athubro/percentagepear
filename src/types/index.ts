@@ -78,16 +78,6 @@ export interface AttendanceRecord {
   reason?: string;
 }
 
-export interface DocumentItem {
-  id: string;
-  title: string;
-  type: 'report_card' | 'progress_report' | 'transcript' | 'other';
-  date: string;
-  description?: string;
-  isDemo: boolean;
-  documentGU?: string;
-}
-
 export interface StudentInfo {
   id: string;
   name: string;

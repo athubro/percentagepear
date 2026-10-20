@@ -9,7 +9,6 @@ import type {
   Course,
   ScheduleEntry,
   AttendanceRecord,
-  DocumentItem,
   Assignment,
 } from '../types';
 import { v4 as uuid } from 'uuid';
@@ -260,33 +259,6 @@ export const DEMO_ATTENDANCE: AttendanceRecord[] = [
   { id: 'att8', date: '2025-10-03', status: 'absent', courseName: 'AP English Language', reason: 'Unexcused' },
   { id: 'att9', date: '2025-10-06', status: 'present' },
   { id: 'att10', date: '2025-10-08', status: 'present' },
-];
-
-export const DEMO_DOCUMENTS: DocumentItem[] = [
-  {
-    id: 'doc1',
-    title: 'Q1 Progress Report (Demo)',
-    type: 'progress_report',
-    date: '2025-10-01',
-    description: 'Sample progress report for demonstration purposes only.',
-    isDemo: true,
-  },
-  {
-    id: 'doc2',
-    title: 'Unofficial Transcript Sample',
-    type: 'transcript',
-    date: '2025-06-15',
-    description: 'Fictional transcript for guest mode.',
-    isDemo: true,
-  },
-  {
-    id: 'doc3',
-    title: 'Course Selection Confirmation',
-    type: 'other',
-    date: '2025-08-20',
-    description: 'Demo document – not an official school record.',
-    isDemo: true,
-  },
 ];
 
 /** Deep clone helper so mutations never touch the original fixtures */

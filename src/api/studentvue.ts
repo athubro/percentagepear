@@ -39,7 +39,6 @@ export interface SvueSession {
   courses: Course[]
   schedule: ScheduleEntry[]
   attendance: AttendanceRecord[]
-  documents: DocumentItem[]
   debug?: string
   method?: string
 }
@@ -86,7 +85,6 @@ function proxyPath(path: string): string {
 }
 
 async function mobileFetch(
-  host: string,
   method: string,
   inner: Record<string, unknown>,
   authorization: string
@@ -132,7 +130,6 @@ async function mobileFetch(
 async function login(creds: SvueCredentials): Promise<{ access: string; refresh?: string }> {
   // Grademelon puts userID/password in the body (not null)
   const json = await mobileFetch(
-    creds.host,
     'AttemptLogin',
     {
       userID: creds.username,
@@ -157,10 +154,10 @@ async function api(
   method: string,
   inner: Record<string, unknown>
 ): Promise<any> {
-  let json = await mobileFetch(creds.host, method, inner, `Bearer ${token}`)
+  let json = await mobileFetch(method, inner, `Bearer ${token}`)
   if (json?.error?.code === '401') {
     const t = await login(creds)
-    json = await mobileFetch(creds.host, method, inner, `Bearer ${t.access}`)
+    json = await mobileFetch(method, inner, `Bearer ${t.access}`)
   }
   if (json?.error) {
     if (json.error.code === '2100') return null
@@ -419,70 +416,6 @@ function parseAttendance(data: unknown): AttendanceRecord[] {
   return records
 }
 
-function docType(name: string): DocumentItem['type'] {
-  const n = name.toLowerCase()
-  if (n.includes('report card')) return 'report_card'
-  if (n.includes('progress')) return 'progress_report'
-  if (n.includes('transcript')) return 'transcript'
-  return 'other'
-}
-
-function parseDocuments(data: unknown): DocumentItem[] {
-  const docs: DocumentItem[] = []
-  const seen = new Set<string>()
-  for (const row of collectObjects(data)) {
-    const title = String(
-      row.documentName || row.DocumentName || row.fileName || row.FileName || ''
-    ).trim()
-    const gu = String(row.documentGU || row.DocumentGU || row.documentGu || row.fileGU || '').trim()
-    if (!title && !gu) continue
-    if (title.length > 180) continue
-    const key = gu || title
-    if (seen.has(key)) continue
-    seen.add(key)
-    const dateRaw = String(row.documentDate || row.DocumentDate || row.date || row.Date || '')
-    docs.push({
-      id: gu || `doc-${docs.length}`,
-      title: title || 'Document',
-      type: docType(title),
-      date: dateRaw ? normalizeDate(dateRaw) : '',
-      description: String(row.documentComment || row.comment || row.Comment || '') || undefined,
-      isDemo: false,
-      documentGU: gu || undefined,
-    })
-  }
-  return docs
-}
-
-let liveToken = ''
-let liveCreds: SvueCredentials | null = null
-
-/** Download a StudentVUE document as a PDF blob URL. Returns null if unavailable. */
-export async function openStudentDocument(documentGU: string): Promise<void> {
-  if (!liveToken || !liveCreds) throw new Error('Connect StudentVUE first')
-  const data = await api(liveCreds, liveToken, 'GetStudentDocumentContent', {
-    childIntID: 0,
-    documentGU,
-  })
-  const payload =
-    data?.studentAttachedDocumentData ||
-    data?.StudentAttachedDocumentData ||
-    data
-  const b64 = String(
-    payload?.base64Code ||
-      payload?.Base64Code ||
-      payload?.documentData ||
-      payload?.DocumentData ||
-      payload?.fileContent ||
-      ''
-  ).replace(/\s/g, '')
-  if (!b64) throw new Error('This document has no downloadable file')
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank', 'noopener')
-}
-
 export async function connectStudentVue(creds: SvueCredentials): Promise<SvueSession> {
   const host = creds.host.replace(/^https?:\/\//, '').replace(/\/$/, '') || MCPS_HOST
   const normalized: SvueCredentials = {
@@ -492,8 +425,6 @@ export async function connectStudentVue(creds: SvueCredentials): Promise<SvueSes
   }
 
   const tokens = await login(normalized)
-  liveToken = tokens.access
-  liveCreds = normalized
 
   let student: StudentInfo = {
     id: normalized.username,
@@ -594,17 +525,6 @@ export async function connectStudentVue(creds: SvueCredentials): Promise<SvueSes
     }
   }
 
-  let documents: DocumentItem[] = []
-  try {
-    const docs = await api(normalized, tokens.access, 'GetStudentDocuments', {
-      childIntID: 0,
-      languageCode: 'en',
-    })
-    documents = parseDocuments(docs)
-  } catch {
-    /* optional */
-  }
-
   if (!courses.length) {
     throw new Error(
       'Login succeeded but no courses were returned. Your marking period may be closed.'
@@ -618,7 +538,5 @@ export async function connectStudentVue(creds: SvueCredentials): Promise<SvueSes
     courses,
     schedule,
     attendance,
-    documents,
-    method: 'mobile+edupointkeyversion',
   }
 }

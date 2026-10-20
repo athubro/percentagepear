@@ -12,7 +12,6 @@ const nav = [
   { to: '/scenarios', label: 'Scenarios', icon: '◎' },
   { to: '/schedule', label: 'Schedule', icon: '◷' },
   { to: '/attendance', label: 'Attendance', icon: '◷' },
-  { to: '/documents', label: 'Documents', icon: '📄' },
   { to: '/analytics', label: 'Analytics', icon: '▥' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]

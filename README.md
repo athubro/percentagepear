@@ -13,7 +13,7 @@ StudentVUE (MCPS) integration is scaffolded but not live-verified in this enviro
 - **Weighted-category and total-points** calculation engine
 - **Target-grade calculator**
 - **Scenarios** – create, switch, duplicate, delete; persisted in `localStorage`
-- **Dashboard**, **Assignments**, **Schedule**, **Attendance**, **Documents**, **Analytics**, **Settings**
+- **Dashboard**, **Assignments**, **Schedule**, **Attendance**, **Analytics**, **Settings**
 - **Light / dark theme**
 - **Responsive layout** with sidebar + mobile drawer
 - **Unit tests** for the grade engine (`vitest`)
