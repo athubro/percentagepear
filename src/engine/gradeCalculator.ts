@@ -7,7 +7,6 @@
 import type {
   Assignment,
   Course,
-  GradingCategory,
   CalculatedGrade,
   LetterGrade,
   TargetGradeResult,
@@ -43,8 +42,8 @@ export function letterToMidpoint(letter: LetterGrade): number {
   }
 }
 
-function isScored(a: Assignment): boolean {
-  return a.score !== null && a.status !== 'excused' && !a.extraCredit;
+function isScored(_a: Assignment): boolean {
+  return false;
 }
 
 function isExtraCredit(a: Assignment): boolean {
@@ -69,7 +68,7 @@ export function calculateCourseGrade(
 }
 
 function calculateTotalPoints(
-  course: Course,
+  _course: Course,
   assignments: Assignment[],
   warnings: string[]
 ): CalculatedGrade {

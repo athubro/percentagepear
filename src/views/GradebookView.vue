@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '../stores/appStore'
-import { formatGrade, percentageToLetter } from '../engine/gradeCalculator'
+import { formatGrade } from '../engine/gradeCalculator'
 import type { Assignment } from '../types'
 
 const store = useAppStore()
