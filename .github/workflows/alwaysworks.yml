@@ -1,0 +1,19 @@
+name: Always Works Workflow
+
+# Triggers the workflow on any push, pull request, or manually via the GitHub UI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-connection:
+    name: Run Base Sanity Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print Success Message
+        run: |
+          echo "🚀 GitHub Actions environment is running correctly!"
+          echo "👤 Triggered by user: ${{ github.actor }}"
+          echo "📅 Current run ID: ${{ github.run_id }}"
