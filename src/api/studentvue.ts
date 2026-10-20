@@ -28,9 +28,8 @@ const API = '/api/v1/mobile/PXPWebServices'
 /* ── CORS proxy config ─────────────────────────────────────────────── */
 // Try multiple reliable CORS proxies for better resilience
 const PROXIES = [
-  'https://api.allorigins.win/raw?url=',
   'https://thingproxy.freeboard.io/fetch/',
-  'https://runkit.io/3kh0/cors-proxy/branches/master?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
 ]
 
 /**
@@ -49,6 +48,10 @@ function buildUrl(host: string, path: string): string {
     // Local dev-server proxy (original behaviour)
     return `/svue-proxy${path}`
   }
+  // Production: use Grademelon style proxy
+  const target = `https://${host}${path}`
+  return `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
+}
   // Production: route through CORS proxy
   const target = `https://${host}${path}`
   return `${PROXIES[0]}${encodeURIComponent(target)}`
@@ -123,7 +126,24 @@ async function mobileFetch(
   authorization: string
 ): Promise<any> {
   const keyver = await edupointKeyVersion()
-  const url = buildUrl(_currentHost, `${API}/${method}`)
+  // If using Grademelon proxy, adjust endpoint
+  const isLocal = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname === '::1' ||
+     window.location.port === '5173' ||
+     window.location.port === '4173')
+
+  let url: string
+  if (isLocal) {
+    url = `/svue-proxy${API}/${method}`
+  } else if (creds.useGrademelonProxy) {
+    const target = `https://${host}${API}/${method}`
+    url = `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
+  } else {
+    const target = `https://${host}${API}/${method}`
+    url = `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
+  }
 
   const res = await fetch(url, {
     method: 'POST',
@@ -173,7 +193,8 @@ async function login(creds: SvueCredentials): Promise<{ access: string; refresh?
       password: creds.password,
       userType: 'Student',
     },
-    `Basic ${strToBase64(`${creds.username}:${creds.password}`)}`
+    `Basic ${strToBase64(`${creds.username}:${creds.password}`)}`,
+    creds
   )
 
   if (json?.access_token) {
@@ -192,10 +213,10 @@ async function api(
   inner: Record<string, unknown>
 ): Promise<any> {
   _currentHost = creds.host
-  let json = await mobileFetch(method, inner, `Bearer ${token}`)
+  let json = await mobileFetch(method, inner, `Bearer ${token}`, creds)
   if (json?.error?.code === '401') {
     const t = await login(creds)
-    json = await mobileFetch(method, inner, `Bearer ${t.access}`)
+    json = await mobileFetch(method, inner, `Bearer ${t.access}`, creds)
   }
   if (json?.error) {
     if (json.error.code === '2100') return null
