@@ -1,5 +1,9 @@
+
 /**
  * StudentVUE client — matches www.grademelon.org mobile JSON flow.
+ *
+ * Updated for GitHub Pages deployment:
+ * - Uses corsproxy.io as a CORS proxy instead of a local dev-server proxy.
  *
  * Critical for MCPS Synergy 2027:
  * - Header `edupointkeyversion` = AES-256-CBC of MMDDYY|9.0.0|MMDDYY|android
@@ -20,6 +24,29 @@ import type {
 
 export const MCPS_HOST = 'md-mcps-psv.edupoint.com'
 const API = '/api/v1/mobile/PXPWebServices'
+
+/* ── CORS proxy config ─────────────────────────────────────────────── */
+const CORS_PROXY = 'https://corsproxy.io/?'
+
+/**
+ * Build the full proxied URL for a given host + path.
+ * In dev (npm run dev) you can set VITE_USE_LOCAL_PROXY=true in .env
+ * to keep using the local /svue-proxy path instead.
+ */
+function buildUrl(host: string, path: string): string {
+  const useLocal =
+    typeof import.meta !== 'undefined' &&
+    (import.meta as any).env?.VITE_USE_LOCAL_PROXY === 'true'
+
+  if (useLocal) {
+    // Local dev-server proxy (original behaviour)
+    return `/svue-proxy${path}`
+  }
+  // Production: route through CORS proxy
+  const target = `https://${host}${path}`
+  return `${CORS_PROXY}${encodeURIComponent(target)}`
+}
+/* ─────────────────────────────────────────────────────────────────── */
 
 const COLORS = [
   '#22c55e', '#3b82f6', '#a855f7', '#ef4444', '#f59e0b', '#14b8a6', '#ec4899', '#6366f1',
@@ -80,9 +107,8 @@ async function edupointKeyVersion(): Promise<string> {
   return toBase64(new Uint8Array(ct))
 }
 
-function proxyPath(path: string): string {
-  return `/svue-proxy${path}`
-}
+/* ── The host is threaded through so buildUrl can construct the target ── */
+let _currentHost = MCPS_HOST
 
 async function mobileFetch(
   method: string,
@@ -90,7 +116,9 @@ async function mobileFetch(
   authorization: string
 ): Promise<any> {
   const keyver = await edupointKeyVersion()
-  const res = await fetch(proxyPath(`${API}/${method}`), {
+  const url = buildUrl(_currentHost, `${API}/${method}`)
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Accept: '*/*',
@@ -110,7 +138,9 @@ async function mobileFetch(
     json = JSON.parse(text)
   } catch {
     throw new Error(
-      `StudentVUE returned non-JSON (HTTP ${res.status}). Ensure "npm run dev" is running.`
+      `StudentVUE returned non-JSON (HTTP ${res.status}). ` +
+      `If running locally, ensure "npm run dev" is running. ` +
+      `If deployed, the CORS proxy may be down or blocking the request.`
     )
   }
 
@@ -128,7 +158,7 @@ async function mobileFetch(
 }
 
 async function login(creds: SvueCredentials): Promise<{ access: string; refresh?: string }> {
-  // Grademelon puts userID/password in the body (not null)
+  _currentHost = creds.host
   const json = await mobileFetch(
     'AttemptLogin',
     {
@@ -154,6 +184,7 @@ async function api(
   method: string,
   inner: Record<string, unknown>
 ): Promise<any> {
+  _currentHost = creds.host
   let json = await mobileFetch(method, inner, `Bearer ${token}`)
   if (json?.error?.code === '401') {
     const t = await login(creds)
@@ -186,7 +217,6 @@ function finiteNum(value: unknown): number | undefined {
 function parseScore(raw: unknown): number | null {
   if (raw == null || raw === '' || raw === '*') return null
   const s = String(raw).replace(/%/g, '').trim()
-  // "28 / 30" or "28.00000" — take the leading number only
   const m = /^([\d.]+)/.exec(s)
   if (m) {
     const n = parseFloat(m[1])
@@ -203,12 +233,10 @@ function parseScore(raw: unknown): number | null {
 function parsePointsPossible(a: any): number {
   const candidates: (number | undefined)[] = []
 
-  // Explicit fields
   candidates.push(finiteNum(a.pointPossible))
   candidates.push(finiteNum(a.PointsPossible))
   candidates.push(finiteNum(a.point))
 
-  // `points` display: "28.000 / 30.000" → 30 ; "10 Points Possible" → 10
   const pointsRaw = a.points != null ? String(a.points).trim() : ''
   if (pointsRaw) {
     const denom = /\/\s*([\d.]+)\s*$/.exec(pointsRaw)
@@ -219,21 +247,18 @@ function parsePointsPossible(a: any): number {
     }
   }
 
-  // displayScore: "28 out of 30" or "28 / 30" → denominator
   const display = a.displayScore != null ? String(a.displayScore) : ''
   if (display) {
     const m = /(?:\/|\bout\s+of\b)\s*([\d.]+)\s*$/i.exec(display)
     if (m) candidates.push(finiteNum(m[1]))
   }
 
-  // score string itself if it has a slash: "28/30"
   const scoreStr = a.score != null ? String(a.score) : ''
   if (scoreStr.includes('/')) {
     const m = /\/\s*([\d.]+)\s*$/.exec(scoreStr)
     if (m) candidates.push(finiteNum(m[1]))
   }
 
-  // Rubric type: "Rubric 0 - 4"
   const scoreType = a.scoreType != null ? String(a.scoreType) : ''
   if (scoreType) {
     const m = /rubric\D*[\d.]+\s*(?:-|–|to)\s*([\d.]+)/i.exec(scoreType)
@@ -540,3 +565,4 @@ export async function connectStudentVue(creds: SvueCredentials): Promise<SvueSes
     attendance,
   }
 }
+
