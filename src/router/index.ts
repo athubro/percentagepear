@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
-  history: createWebHistory(),
+  // BASE_URL follows Vite's `base` ('/' locally, '/percentagepear/' in the
+  // GitHub Pages deploy), so routes resolve correctly under the subpath.
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
