@@ -42,9 +42,9 @@ export function letterToMidpoint(letter: LetterGrade): number {
   }
 }
 
-function isScored(_a: Assignment): boolean {
-  return false;
-}
+// function isScored(_a: Assignment): boolean {
+//   return false;
+// }
 
 function isExtraCredit(a: Assignment): boolean {
   return !!a.extraCredit || (a.pointsPossible === 0 && a.score != null && a.score > 0);
