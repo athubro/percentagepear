@@ -2,14 +2,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/appStore'
-import { MCPS_HOST } from '../api/studentvue'
+import { MCPS_HOST, DEFAULT_CORS_PROXY } from '../api/studentvue'
 
 const store = useAppStore()
 const router = useRouter()
 const username = ref('')
 const password = ref('')
 const host = ref(MCPS_HOST)
-const useGmProxy = ref(false)
+const proxyUrl = ref(DEFAULT_CORS_PROXY)
 const status = ref<'idle' | 'loading' | 'error' | 'success'>('idle')
 const message = ref('')
 
@@ -22,9 +22,12 @@ async function attemptConnect() {
   status.value = 'loading'
   message.value = 'Connecting with Grademelon-compatible mobile API…'
   try {
-    // Pass proxy preference through by temporarily storing on a side channel
-    ;(globalThis as any).__ppUseGmProxy = useGmProxy.value
-    const session = await store.loginStudentVue(username.value, password.value, host.value)
+    const session = await store.loginStudentVue(
+      username.value,
+      password.value,
+      host.value,
+      proxyUrl.value
+    )
     status.value = 'success'
     message.value =
       `Signed in as ${session.student.name}. Loaded ${session.courses.length} courses` +
@@ -72,10 +75,14 @@ function goGuest() {
         <label>Password</label>
         <input v-model="password" type="password" class="input" autocomplete="current-password" @keyup.enter="attemptConnect" />
       </div>
-      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;margin-bottom:1rem;color:var(--text-muted)">
-        <input type="checkbox" v-model="useGmProxy" />
-        Prefer Grademelon public proxy (credentials go to their Railway server)
-      </label>
+      <div class="form-group">
+        <label>CORS proxy</label>
+        <input v-model="proxyUrl" class="input" placeholder="https://studentvuelib.up.railway.app/fulfillRest" />
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem;line-height:1.4">
+          Requests are tunnelled through this proxy because the StudentVUE API does not send CORS headers.
+          Your credentials are sent to it. Ignored on localhost.
+        </p>
+      </div>
       <button class="btn btn-primary" style="width:100%" :disabled="status==='loading'||store.loading" @click="attemptConnect">
         {{ status === 'loading' || store.loading ? 'Connecting…' : 'Connect & Load Grades' }}
       </button>

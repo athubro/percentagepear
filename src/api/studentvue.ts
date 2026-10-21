@@ -3,7 +3,9 @@
  * StudentVUE client — matches www.grademelon.org mobile JSON flow.
  *
  * Updated for GitHub Pages deployment:
- * - Uses corsproxy.io as a CORS proxy instead of a local dev-server proxy.
+ * - StudentVUE calls are tunnelled through a CORS proxy (see api/proxy.ts).
+ *   GitHub Pages is static hosting, so it cannot add the CORS response
+ *   headers the browser requires. Locally we keep using the Vite dev proxy.
  *
  * Critical for MCPS Synergy 2027:
  * - Header `edupointkeyversion` = AES-256-CBC of MMDDYY|9.0.0|MMDDYY|android
@@ -21,9 +23,13 @@ import type {
   AttendanceRecord,
   AssignmentStatus,
 } from '../types'
+import { fulfillRest, normalizeProxyBase, DEFAULT_PROXY_URL } from './proxy'
 
 export const MCPS_HOST = 'md-mcps-psv.edupoint.com'
 const API = '/api/v1/mobile/PXPWebServices'
+
+/** Public CORS proxy used when the site is not running on localhost. */
+export const DEFAULT_CORS_PROXY = DEFAULT_PROXY_URL
 
 /**
  * Build the full proxied URL for a given host + path.
@@ -40,7 +46,8 @@ export interface SvueCredentials {
   username: string
   password: string
   host: string
-  useGrademelonProxy?: boolean
+  /** CORS proxy to tunnel deployed requests through. */
+  proxyUrl?: string
 }
 
 export interface SvueSession {
@@ -93,7 +100,30 @@ async function edupointKeyVersion(): Promise<string> {
 
 /* ── The host is threaded through so buildUrl can construct the target ── */
 let _currentHost = MCPS_HOST
+/** CORS proxy used in production (static hosting has no header control). */
+let _currentProxy = DEFAULT_CORS_PROXY
+/** Credentials for the proxied transport; the proxy attaches them upstream. */
+let _currentUserId = ''
 
+function isLocalhost(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '::1')
+  )
+}
+
+/**
+ * Perform one StudentVUE call.
+ *
+ * Transport depends on where the app runs:
+ * - localhost  → Vite dev proxy (`/svue-proxy/*`) forwards straight to
+ *   StudentVUE, so we send the native header-based request.
+ * - deployed   → the request is tunnelled through a CORS proxy, which
+ *   replays it server-side and adds the CORS response headers the browser
+ *   requires. Credentials travel in the JSON body, not in headers.
+ */
 async function mobileFetch(
   method: string,
   inner: Record<string, unknown>,
@@ -101,44 +131,56 @@ async function mobileFetch(
 ): Promise<any> {
   const keyver = await edupointKeyVersion()
   const host = _currentHost
-  // If using Grademelon proxy, adjust endpoint
-  const isLocal = typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-     window.location.hostname === '127.0.0.1' ||
-     window.location.hostname === '::1')
+  const target = `https://${host}${API}/${method}`
 
-  let url: string
-  if (isLocal) {
-    url = `/svue-proxy${API}/${method}`
-  } else {
-    const target = `https://${host}${API}/${method}`
-    url = `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Accept: '*/*',
-      'Content-Type': 'application/json',
-      'User-Agent': 'ksoap',
-      edupointkeyversion: keyver,
-      Authorization: authorization,
-    },
-    body: JSON.stringify({
-      arguments: { request: JSON.stringify(inner) },
-    }),
-  })
-
-  const text = await res.text()
   let json: any
-  try {
-    json = JSON.parse(text)
-  } catch {
-    throw new Error(
-      `StudentVUE returned non-JSON (HTTP ${res.status}). ` +
-      `If running locally, ensure "npm run dev" is running. ` +
-      `If deployed, the CORS proxy may be down or blocking the request.`
-    )
+
+  if (isLocalhost()) {
+    const res = await fetch(`/svue-proxy${API}/${method}`, {
+      method: 'POST',
+      headers: {
+        Accept: '*/*',
+        'Content-Type': 'application/json',
+        'User-Agent': 'ksoap',
+        edupointkeyversion: keyver,
+        Authorization: authorization,
+      },
+      body: JSON.stringify({
+        arguments: { request: JSON.stringify(inner) },
+      }),
+    })
+    const text = await res.text()
+    try {
+      json = JSON.parse(text)
+    } catch {
+      throw new Error(
+        `StudentVUE returned non-JSON (HTTP ${res.status}). ` +
+          `If running locally, ensure "npm run dev" is running.`
+      )
+    }
+  } else {
+    const isBearer = authorization.startsWith('Bearer ')
+    const auth = isBearer
+      ? { type: 'bearer' as const, token: authorization.slice('Bearer '.length) }
+      : {
+          type: 'basic' as const,
+          userID: _currentUserId,
+          password: String(inner.password ?? ''),
+        }
+
+    // The proxy forwards `request` as the StudentVUE argument payload.
+    const request = { ...inner }
+    delete request.password
+    delete request.userID
+
+    json = await fulfillRest(_currentProxy, {
+      url: target,
+      methodName: method,
+      userID: _currentUserId,
+      request,
+      auth,
+      encrypted: false,
+    })
   }
 
   const errMsg = String(json?.error?.message || json?.Message || '')
@@ -156,6 +198,8 @@ async function mobileFetch(
 
 async function login(creds: SvueCredentials): Promise<{ access: string; refresh?: string }> {
   _currentHost = creds.host
+  _currentUserId = creds.username
+  if (creds.proxyUrl) _currentProxy = normalizeProxyBase(creds.proxyUrl)
   const json = await mobileFetch(
     'AttemptLogin',
     {

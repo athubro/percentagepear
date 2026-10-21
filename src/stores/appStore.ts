@@ -24,7 +24,7 @@ import {
   compareGrades,
   percentageToLetter,
 } from '../engine/gradeCalculator';
-import { connectStudentVue, MCPS_HOST, type SvueCredentials } from '../api/studentvue';
+import { connectStudentVue, MCPS_HOST, DEFAULT_CORS_PROXY, type SvueCredentials } from '../api/studentvue';
 
 const STORAGE_KEY = 'percentagepear-state-v1';
 
@@ -334,7 +334,12 @@ export const useAppStore = defineStore('app', () => {
     return applySimulation(course, sim.hypotheticalAssignments, sim.modifiedScores);
   }
 
-  async function loginStudentVue(username: string, password: string, host = MCPS_HOST) {
+  async function loginStudentVue(
+    username: string,
+    password: string,
+    host = MCPS_HOST,
+    proxyUrl = DEFAULT_CORS_PROXY
+  ) {
     loading.value = true;
     error.value = null;
     try {
@@ -342,10 +347,8 @@ export const useAppStore = defineStore('app', () => {
         username: username.trim(),
         password,
         host: host.replace(/^https?:\/\//, '').replace(/\/$/, '') || MCPS_HOST,
-        useGrademelonProxy: false, // set below
+        proxyUrl: proxyUrl || DEFAULT_CORS_PROXY,
       };
-      const anyStore = globalThis as any;
-      creds.useGrademelonProxy = !!(anyStore.__ppUseGmProxy);
       const session = await connectStudentVue(creds);
       mode.value = 'studentvue';
       student.value = session.student;
