@@ -308,6 +308,7 @@ tr:hover td { background: color-mix(in srgb, var(--border) 40%, transparent); }
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 .topbar {
   height: var(--topbar-height);
@@ -335,6 +336,7 @@ tr:hover td { background: color-mix(in srgb, var(--border) 40%, transparent); }
 .page-content {
   padding: 1.5rem;
   flex: 1;
+  min-width: 0;
 }
 .page-header {
   display: flex;
@@ -453,19 +455,30 @@ tr:hover td { background: color-mix(in srgb, var(--border) 40%, transparent); }
 @media (min-width: 901px) {
   .sidebar { top:5.9rem; left:2.5rem; bottom:auto; width:16rem; max-height:calc(100vh - 7.4rem); border:1px solid rgba(255,255,255,.15); border-radius:10px; box-shadow:var(--shadow-lg); overflow:hidden; }
   .main-area { margin-left:0; }
-  .page-content { margin-left:20.5rem; }
+  .page-content { margin-left:20.5rem; width:calc(100% - 20.5rem); }
   .sidebar-brand { border-bottom:0; padding-bottom:.8rem; }
 }
 
 .grid-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1224px;
   gap: 1rem;
 }
 .course-card {
+  min-width: 0;
   cursor: pointer;
   transition: box-shadow .15s, transform .15s;
   border-left: 4px solid var(--course-color, var(--primary));
+}
+
+@media (max-width: 1320px) and (min-width: 701px) {
+  .grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .grid-cards { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+  .card { padding: 1rem; }
 }
 .course-card:hover {
   box-shadow: var(--shadow-lg);
