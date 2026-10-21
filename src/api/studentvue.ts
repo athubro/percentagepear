@@ -25,13 +25,6 @@ import type {
 export const MCPS_HOST = 'md-mcps-psv.edupoint.com'
 const API = '/api/v1/mobile/PXPWebServices'
 
-/* ── CORS proxy config ─────────────────────────────────────────────── */
-// Try multiple reliable CORS proxies for better resilience
-const PROXIES = [
-  'https://thingproxy.freeboard.io/fetch/',
-  'https://api.codetabs.com/v1/proxy?quest=',
-]
-
 /**
  * Build the full proxied URL for a given host + path.
  * In dev, always use the local proxy. In prod, try the first proxy.
@@ -107,13 +100,12 @@ async function mobileFetch(
   authorization: string
 ): Promise<any> {
   const keyver = await edupointKeyVersion()
+  const host = _currentHost
   // If using Grademelon proxy, adjust endpoint
   const isLocal = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' ||
      window.location.hostname === '127.0.0.1' ||
-     window.location.hostname === '::1' ||
-     window.location.port === '5173' ||
-     window.location.port === '4173')
+     window.location.hostname === '::1')
 
   let url: string
   if (isLocal) {
@@ -171,8 +163,7 @@ async function login(creds: SvueCredentials): Promise<{ access: string; refresh?
       password: creds.password,
       userType: 'Student',
     },
-    `Basic ${strToBase64(`${creds.username}:${creds.password}`)}`,
-    creds
+    `Basic ${strToBase64(`${creds.username}:${creds.password}`)}`
   )
 
   if (json?.access_token) {
@@ -191,10 +182,10 @@ async function api(
   inner: Record<string, unknown>
 ): Promise<any> {
   _currentHost = creds.host
-  let json = await mobileFetch(method, inner, `Bearer ${token}`, creds)
+  let json = await mobileFetch(method, inner, `Bearer ${token}`)
   if (json?.error?.code === '401') {
     const t = await login(creds)
-    json = await mobileFetch(method, inner, `Bearer ${t.access}`, creds)
+    json = await mobileFetch(method, inner, `Bearer ${t.access}`)
   }
   if (json?.error) {
     if (json.error.code === '2100') return null
