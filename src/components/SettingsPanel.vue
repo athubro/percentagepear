@@ -15,25 +15,12 @@ const hexIsValid = computed(
 )
 
 const activeVars = computed(() =>
-  resolveColorVars(
-    store.preferences.colorTheme,
-    store.preferences.customPrimary,
-    store.preferences.gradeColors
-  )
+  resolveColorVars(store.preferences.colorTheme, store.preferences.customPrimary)
 )
 
 /** The primary color actually in effect right now. */
 const activePrimary = computed(() => activeVars.value['--primary'])
 const activeContrast = computed(() => activeVars.value['--primary-contrast'])
-
-/** The color in effect for each letter grade. */
-const activeGradeColors = computed(() => {
-  const out: Record<string, string> = {}
-  for (const letter of store.gradeLetters) {
-    out[letter] = activeVars.value[`--grade-${letter}`]
-  }
-  return out
-})
 
 function applyCustomHex() {
   if (!hexIsValid.value) return
@@ -152,46 +139,6 @@ function clearAll() {
 
       <button type="button" class="btn btn-secondary btn-sm" @click="store.resetColorTheme">
         Reset colors
-      </button>
-    </div>
-
-    <div class="card" style="margin-bottom:1rem">
-      <h2 style="font-size:1rem;margin-bottom:1rem">Grade colors</h2>
-      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">
-        Choose the color used for each letter grade badge.
-      </p>
-      <div class="grade-color-grid">
-        <div v-for="letter in store.gradeLetters" :key="letter" class="grade-color-item">
-          <span
-            class="grade-pill grade-preview"
-            :class="'grade-' + letter"
-            aria-hidden="true"
-          >
-            {{ letter }}
-          </span>
-          <input
-            type="color"
-            :value="activeGradeColors[letter]"
-            :aria-label="'Pick a color for grade ' + letter"
-            @input="store.setGradeColor(letter, ($event.target as HTMLInputElement).value)"
-          />
-          <button
-            v-if="store.preferences.gradeColors[letter]"
-            type="button"
-            class="btn btn-ghost btn-sm"
-            @click="store.setGradeColor(letter, null)"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-      <button
-        type="button"
-        class="btn btn-secondary btn-sm"
-        style="margin-top:0.75rem"
-        @click="store.resetGradeColors"
-      >
-        Reset grade colors
       </button>
     </div>
 
