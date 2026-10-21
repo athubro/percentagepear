@@ -36,26 +36,7 @@ const PROXIES = [
  * Build the full proxied URL for a given host + path.
  * In dev, always use the local proxy. In prod, try the first proxy.
  */
-function buildUrl(host: string, path: string): string {
-  const isLocal = typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-     window.location.hostname === '127.0.0.1' ||
-     window.location.hostname === '::1' ||
-     window.location.port === '5173' ||
-     window.location.port === '4173')
 
-  if (isLocal) {
-    // Local dev-server proxy (original behaviour)
-    return `/svue-proxy${path}`
-  }
-  // Production: use Grademelon style proxy
-  const target = `https://${host}${path}`
-  return `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
-}
-  // Production: route through CORS proxy
-  const target = `https://${host}${path}`
-  return `${PROXIES[0]}${encodeURIComponent(target)}`
-}
 /* ─────────────────────────────────────────────────────────────────── */
 
 const COLORS = [
@@ -137,9 +118,6 @@ async function mobileFetch(
   let url: string
   if (isLocal) {
     url = `/svue-proxy${API}/${method}`
-  } else if (creds.useGrademelonProxy) {
-    const target = `https://${host}${API}/${method}`
-    url = `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
   } else {
     const target = `https://${host}${API}/${method}`
     url = `https://api.grademelon.org/proxy?url=${encodeURIComponent(target)}`
