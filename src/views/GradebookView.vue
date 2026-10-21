@@ -12,7 +12,7 @@ const router = useRouter()
 const selectedId = ref((route.params.courseId as string) || store.courses[0]?.id || '')
 const search = ref('')
 const statusFilter = ref('all')
-const showAddModal = ref(false)
+const isAdding = ref(false)
 
 // Add form
 const newName = ref('')
@@ -47,9 +47,8 @@ const scenariosForCourse = computed(() =>
   store.scenarios.filter((s) => s.courseId === selectedId.value)
 )
 
-function selectCourse(id: string) {
-  selectedId.value = id
-  router.replace({ name: 'gradebook', params: { courseId: id } })
+function goBack() {
+  router.push('/dashboard')
 }
 
 function openAdd() {
@@ -58,7 +57,7 @@ function openAdd() {
   newName.value = ''
   newPts.value = 100
   newScore.value = 90
-  showAddModal.value = true
+  isAdding.value = true
 }
 
 function submitAdd() {
@@ -70,7 +69,7 @@ function submitAdd() {
     score: newScore.value,
     dueDate: newDue.value,
   })
-  showAddModal.value = false
+  isAdding.value = false
 }
 
 function onScoreEdit(a: Assignment, val: string) {
@@ -95,29 +94,17 @@ function catName(id: string) {
 
 <template>
   <div v-if="course">
-    <div class="page-header">
+    <div class="page-header gradebook-header">
       <div>
-        <h1>Gradebook</h1>
-        <p>{{ course.name }} · {{ course.teacher.name }} · Period {{ course.period }}</p>
+        <button class="back-to-classes" @click="goBack">← All classes</button>
+        <h1>{{ course.name }}</h1>
+        <p>{{ course.teacher.name }} · Period {{ course.period }}</p>
       </div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-        <button class="btn btn-primary" @click="openAdd">+ Hypothetical Assignment</button>
-        <button class="btn btn-secondary" @click="createQuickScenario">Save Scenario</button>
-        <button class="btn btn-ghost" @click="store.resetSimulation(selectedId)">Reset Sim</button>
+      <div class="course-actions">
+        <button class="icon-button icon-button-primary" title="Add assignment" aria-label="Add hypothetical assignment" @click="openAdd">＋</button>
+        <button class="btn btn-secondary btn-sm" @click="createQuickScenario">Save scenario</button>
+        <button class="btn btn-ghost btn-sm" @click="store.resetSimulation(selectedId)">Reset</button>
       </div>
-    </div>
-
-    <!-- Course selector -->
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
-      <button
-        v-for="c in store.courses"
-        :key="c.id"
-        class="btn btn-sm"
-        :class="c.id === selectedId ? 'btn-primary' : 'btn-secondary'"
-        @click="selectCourse(c.id)"
-      >
-        {{ c.name }}
-      </button>
     </div>
 
     <!-- Grade summary -->
@@ -190,7 +177,7 @@ function catName(id: string) {
     </div>
 
     <!-- Assignment table -->
-    <div class="card table-wrap">
+    <div class="card table-wrap assignment-table">
       <table>
         <thead>
           <tr>
@@ -203,6 +190,14 @@ function catName(id: string) {
           </tr>
         </thead>
         <tbody>
+          <tr v-if="isAdding" class="new-assignment-row">
+            <td><input v-model="newName" class="input" placeholder="New assignment" @keyup.enter="submitAdd" /></td>
+            <td><select v-model="newCat" class="select"><option v-for="cat in course.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option></select></td>
+            <td><input v-model="newDue" class="input" type="date" /></td>
+            <td><input v-model.number="newScore" class="input score-input" type="number" min="0" placeholder="Score" /><span class="score-divider"> / </span><input v-model.number="newPts" class="input points-input" type="number" min="0" placeholder="Pts" /></td>
+            <td><span class="badge badge-hyp">New</span></td>
+            <td class="draft-actions"><button class="btn btn-primary btn-sm" @click="submitAdd">Add</button><button class="btn btn-ghost btn-sm" @click="isAdding = false">Cancel</button></td>
+          </tr>
           <tr v-for="a in assignments" :key="a.id">
             <td>
               {{ a.name }}
@@ -247,41 +242,14 @@ function catName(id: string) {
       <div v-if="!assignments.length" class="empty-state">No assignments match your filters.</div>
     </div>
 
-    <!-- Add modal -->
-    <div v-if="showAddModal" class="modal-backdrop" @click.self="showAddModal = false">
-      <div class="modal">
-        <h2>Add Hypothetical Assignment</h2>
-        <div class="form-group">
-          <label>Name</label>
-          <input v-model="newName" class="input" placeholder="e.g. Final Exam" />
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <select v-model="newCat" class="select">
-            <option v-for="cat in course.categories" :key="cat.id" :value="cat.id">{{ cat.name }} ({{ cat.weight }}%)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Points Possible</label>
-          <input v-model.number="newPts" type="number" class="input" min="0" />
-        </div>
-        <div class="form-group">
-          <label>Score (leave empty for ungraded)</label>
-          <input v-model.number="newScore" type="number" class="input" min="0" />
-        </div>
-        <div class="form-group">
-          <label>Due Date</label>
-          <input v-model="newDue" type="date" class="input" />
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showAddModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="submitAdd">Add & Recalculate</button>
-        </div>
-      </div>
-    </div>
   </div>
   <div v-else class="empty-state">
     <h3>No course selected</h3>
     <p>Choose a course from the dashboard.</p>
   </div>
 </template>
+
+<style scoped>
+.gradebook-header { margin-bottom:1rem; }.back-to-classes { border:0; background:none; color:var(--primary); cursor:pointer; font-size:.85rem; font-weight:650; padding:0; margin-bottom:.35rem; }.course-actions { display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; }.new-assignment-row td { background:var(--primary-soft); vertical-align:middle; }.score-input { width:4.25rem; display:inline-block; padding:.35rem; }.points-input { width:3.75rem; display:inline-block; padding:.35rem; }.score-divider { color:var(--text-muted); }.draft-actions { white-space:nowrap; }
+@media (max-width:700px) { .assignment-table table { font-size:.82rem; }.assignment-table th:nth-child(2),.assignment-table td:nth-child(2),.assignment-table th:nth-child(5),.assignment-table td:nth-child(5) { display:none; }.assignment-table th,.assignment-table td { padding:.55rem .4rem; }.assignment-table th:nth-child(1) { min-width:130px; }.assignment-table th:nth-child(3) { min-width:94px; }.assignment-table .input { max-width:100%; }.new-assignment-row td:nth-child(4) { min-width:130px; }.draft-actions .btn { padding:.3rem .4rem; }.course-actions { width:100%; }.course-actions .btn-secondary { flex:1; justify-content:center; } }
+</style>

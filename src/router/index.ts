@@ -49,12 +49,12 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('../views/SettingsView.vue'),
+      redirect: '/dashboard',
     },
     {
       path: '/connect',
       name: 'connect',
-      component: () => import('../views/ConnectView.vue'),
+      redirect: '/',
     },
   ],
 });

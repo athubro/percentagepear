@@ -1,29 +1,33 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/appStore'
+import SettingsView from '../views/SettingsView.vue'
 
 const store = useAppStore()
+const router = useRouter()
 const sidebarOpen = ref(false)
+const showSettings = ref(false)
 
 const nav = [
-  { to: '/dashboard', label: 'Dashboard', icon: '⌂' },
-  { to: '/gradebook', label: 'Gradebook', icon: '▤' },
-  { to: '/assignments', label: 'Assignments', icon: '☑' },
-  { to: '/scenarios', label: 'Scenarios', icon: '◎' },
   { to: '/schedule', label: 'Schedule', icon: '◷' },
-  { to: '/attendance', label: 'Attendance', icon: '◷' },
-  { to: '/analytics', label: 'Analytics', icon: '▥' },
-  { to: '/settings', label: 'Settings', icon: '⚙' },
+  { to: '/dashboard', label: 'Gradebook', icon: '▣' },
+  { to: '/attendance', label: 'Attendance', icon: '□' },
+  { to: '/assignments', label: 'Assignments', icon: '☑' },
+  { to: '/analytics', label: 'Insights', icon: '◔' },
+  { to: '/scenarios', label: 'Scenarios', icon: '◎' },
 ]
+
+function signOut() {
+  store.logoutStudentVue()
+  router.push('/')
+}
 </script>
 
 <template>
   <div class="app-shell">
     <aside class="sidebar" :class="{ open: sidebarOpen }">
-      <div class="sidebar-brand">
-        <div class="pear-logo" aria-hidden="true" />
-        <span>PercentagePear</span>
-      </div>
+      <router-link to="/dashboard" class="sidebar-brand" @click="sidebarOpen = false"><div class="pear-logo" aria-hidden="true" /><span>Percentage Pear</span></router-link>
       <nav class="sidebar-nav">
         <router-link
           v-for="item in nav"
@@ -37,23 +41,20 @@ const nav = [
         </router-link>
       </nav>
       <div class="sidebar-footer">
-        <div v-if="store.isDemo" class="badge badge-demo" style="margin-bottom:0.5rem">Demo Data</div>
-        <div>{{ store.student?.name }}</div>
-        <div style="opacity:.7">{{ store.student?.school }}</div>
+        <button class="nav-item nav-button" @click="showSettings = true; sidebarOpen = false"><span>⚙</span>Settings</button>
+        <button class="nav-item nav-button" @click="signOut"><span>↪</span>Sign out</button>
       </div>
     </aside>
 
     <div class="main-area">
       <header class="topbar">
-        <div style="display:flex;align-items:center;gap:0.75rem">
-          <button class="mobile-toggle" aria-label="Open menu" @click="sidebarOpen = !sidebarOpen">☰</button>
-          <span v-if="store.isDemo" class="badge badge-demo">Demo Data — not official records</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.75rem">
-          <button class="btn btn-ghost btn-sm" @click="store.setTheme(store.preferences.theme === 'dark' ? 'light' : 'dark')">
+        <div class="topbar-start"><button class="mobile-toggle" aria-label="Open menu" @click="sidebarOpen = !sidebarOpen">☰</button><span class="mobile-brand">Percentage Pear</span><span class="desktop-brand"><span class="pear-logo" aria-hidden="true" />Percentage Pear</span></div>
+        <div class="topbar-actions">
+          <span v-if="store.isDemo" class="badge badge-demo">Guest</span>
+          <button class="icon-button" :aria-label="store.preferences.theme === 'dark' ? 'Use light theme' : 'Use dark theme'" @click="store.setTheme(store.preferences.theme === 'dark' ? 'light' : 'dark')">
             {{ store.preferences.theme === 'dark' ? '☀' : '☾' }}
           </button>
-          <router-link to="/connect" class="btn btn-secondary btn-sm">Connect StudentVUE</router-link>
+          <button class="avatar" :title="store.student?.name" @click="showSettings = true">{{ store.student?.name?.slice(0, 1) || 'P' }}</button>
         </div>
       </header>
       <main class="page-content">
@@ -62,10 +63,12 @@ const nav = [
     </div>
 
     <!-- mobile overlay -->
-    <div
-      v-if="sidebarOpen"
-      style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35"
-      @click="sidebarOpen = false"
-    />
+    <div v-if="sidebarOpen" class="mobile-overlay" @click="sidebarOpen = false" />
+    <div v-if="showSettings" class="modal-backdrop" @click.self="showSettings = false">
+      <section class="modal settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+        <button class="settings-close" aria-label="Close settings" @click="showSettings = false">×</button>
+        <SettingsView />
+      </section>
+    </div>
   </div>
 </template>
