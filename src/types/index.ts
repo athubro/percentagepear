@@ -138,4 +138,8 @@ export interface AppPreferences {
   gradeRounding: number; // decimal places
   showLetterGrades: boolean;
   defaultTargetLetter: LetterGrade;
+  /** Id of the selected color theme (see styles/colorThemes.ts) */
+  colorTheme: string;
+  /** Optional user-picked brand color (hex) overriding the theme's primary */
+  customPrimary: string | null;
 }

@@ -1,9 +1,53 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { useAppStore } from '../stores/appStore'
 import { useRouter } from 'vue-router'
+import { isValidHex, resolveColorVars } from '../styles/colorThemes'
 
 const store = useAppStore()
 const router = useRouter()
+
+/** Text field for a custom hex color; empty means "use the theme default". */
+const customHex = ref(store.preferences.customPrimary ?? '')
+
+const hexIsValid = computed(
+  () => customHex.value.trim() === '' || isValidHex(customHex.value)
+)
+
+/** The primary color actually in effect right now. */
+const activePrimary = computed(
+  () =>
+    resolveColorVars(store.preferences.colorTheme, store.preferences.customPrimary)[
+      '--primary'
+    ]
+)
+
+const activeContrast = computed(
+  () =>
+    resolveColorVars(store.preferences.colorTheme, store.preferences.customPrimary)[
+      '--primary-contrast'
+    ]
+)
+
+function applyCustomHex() {
+  if (!hexIsValid.value) return
+  store.setCustomPrimary(customHex.value.trim() === '' ? null : customHex.value)
+  customHex.value = store.preferences.customPrimary ?? ''
+}
+
+function clearCustom() {
+  customHex.value = ''
+  store.setCustomPrimary(null)
+}
+
+// Keep the text field in sync when the color picker or a theme click changes
+// the stored custom color.
+watch(
+  () => store.preferences.customPrimary,
+  (val) => {
+    customHex.value = val ?? ''
+  }
+)
 
 function clearAll() {
   if (confirm('Clear all local scenarios and reset demo data?')) {
@@ -44,6 +88,69 @@ function clearAll() {
           <option :value="2">2</option>
         </select>
       </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;max-width:480px">
+      <h2 style="font-size:1rem;margin-bottom:1rem">Colors</h2>
+
+      <div class="form-group">
+        <label>Color theme</label>
+        <div class="theme-grid">
+          <button
+            v-for="t in store.colorThemes"
+            :key="t.id"
+            type="button"
+            class="theme-option"
+            :class="{ active: store.preferences.colorTheme === t.id && !store.preferences.customPrimary }"
+            :aria-pressed="store.preferences.colorTheme === t.id && !store.preferences.customPrimary"
+            @click="store.setColorTheme(t.id)"
+          >
+            <span class="theme-swatch" :style="{ background: t.swatch }" aria-hidden="true" />
+            <span>{{ t.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Custom brand color</label>
+        <div class="color-custom-row">
+          <input
+            type="color"
+            :value="activePrimary"
+            aria-label="Pick a custom brand color"
+            @input="store.setCustomPrimary(($event.target as HTMLInputElement).value)"
+          />
+          <input
+            class="input"
+            type="text"
+            placeholder="#16a34a"
+            :value="customHex"
+            :aria-invalid="!hexIsValid"
+            @input="customHex = ($event.target as HTMLInputElement).value"
+            @blur="applyCustomHex"
+            @keyup.enter="applyCustomHex"
+          />
+          <button
+            v-if="store.preferences.customPrimary"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="clearCustom"
+          >
+            Use theme color
+          </button>
+        </div>
+        <p v-if="!hexIsValid" style="font-size:0.8rem;color:var(--danger);margin-top:0.4rem">
+          Enter a valid hex color (for example #16a34a).
+        </p>
+        <div class="color-preview" style="margin-top:0.6rem">
+          <span class="chip" :style="{ background: activePrimary }" aria-hidden="true" />
+          <span>Primary {{ activePrimary }} · text {{ activeContrast }}</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm" @click="store.resetColorTheme">
+        Reset colors
+      </button>
     </div>
 
     <div class="card" style="margin-bottom:1rem;max-width:480px">

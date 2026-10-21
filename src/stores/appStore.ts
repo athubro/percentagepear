@@ -25,6 +25,14 @@ import {
   percentageToLetter,
 } from '../engine/gradeCalculator';
 import { connectStudentVue, MCPS_HOST, DEFAULT_CORS_PROXY, type SvueCredentials } from '../api/studentvue';
+import {
+  COLOR_THEMES,
+  DEFAULT_THEME_ID,
+  getColorTheme,
+  isValidHex,
+  normalizeHex,
+  resolveColorVars,
+} from '../styles/colorThemes';
 
 const STORAGE_KEY = 'percentagepear-state-v1';
 
@@ -66,6 +74,8 @@ export const useAppStore = defineStore('app', () => {
     gradeRounding: 1,
     showLetterGrades: true,
     defaultTargetLetter: 'A',
+    colorTheme: DEFAULT_THEME_ID,
+    customPrimary: null,
   });
 
   function bumpSim() {
@@ -391,10 +401,56 @@ export const useAppStore = defineStore('app', () => {
     persist();
   }
 
+  /**
+   * Writes the resolved color theme onto <html> as CSS custom properties.
+   * Safe to call before the DOM exists (no-op when document is unavailable).
+   */
+  function applyColorTheme() {
+    if (typeof document === 'undefined') return;
+    const vars = resolveColorVars(
+      preferences.value.colorTheme,
+      preferences.value.customPrimary
+    );
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(vars)) {
+      root.style.setProperty(key, value);
+    }
+  }
+
+  function setColorTheme(themeId: string) {
+    const theme = getColorTheme(themeId);
+    preferences.value.colorTheme = theme.id;
+    // Switching preset clears any custom override so the preset shows through
+    preferences.value.customPrimary = null;
+    applyColorTheme();
+    persist();
+  }
+
+  /** Sets a custom brand color. Invalid hex values are ignored. */
+  function setCustomPrimary(color: string | null) {
+    if (color == null || color === '') {
+      preferences.value.customPrimary = null;
+    } else {
+      const norm = normalizeHex(color);
+      if (!norm || !isValidHex(norm)) return;
+      preferences.value.customPrimary = norm;
+    }
+    applyColorTheme();
+    persist();
+  }
+
+  function resetColorTheme() {
+    preferences.value.colorTheme = DEFAULT_THEME_ID;
+    preferences.value.customPrimary = null;
+    applyColorTheme();
+    persist();
+  }
+
   loadPersisted();
   if (mode.value === 'guest' && courses.value.length === 0) {
     enterGuestMode();
   }
+  applyColorTheme();
 
   return {
     mode,
@@ -431,6 +487,11 @@ export const useAppStore = defineStore('app', () => {
     logoutStudentVue,
     applyTheme,
     setTheme,
+    applyColorTheme,
+    setColorTheme,
+    setCustomPrimary,
+    resetColorTheme,
+    colorThemes: COLOR_THEMES,
     persist,
     percentageToLetter,
   };

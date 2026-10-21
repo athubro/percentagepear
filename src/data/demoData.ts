@@ -15,9 +15,9 @@ import { v4 as uuid } from 'uuid';
 
 export const DEMO_STUDENT: StudentInfo = {
   id: 'demo-student-1',
-  name: 'Alex Rivera',
+  name: 'Triple T',
   gradeLevel: 11,
-  school: 'PercentagePear Demo High School',
+  school: 'Tung Tung Tung Sacool',
   studentId: 'PP-2026-0042',
 };
 
