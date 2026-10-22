@@ -66,6 +66,7 @@ export interface ScheduleEntry {
   startTime: string;
   endTime: string;
   days: string[]; // e.g. ['M', 'T', 'W', 'Th', 'F']
+  semester?: 1 | 2;
 }
 
 export interface AttendanceRecord {
@@ -133,6 +134,12 @@ export interface TargetGradeResult {
 
 export type AppMode = 'guest' | 'studentvue';
 
+export interface LetterScaleEntry {
+  letter: Exclude<LetterGrade, 'N/A' | 'F'>;
+  lower: number;
+  upper: number;
+}
+
 export interface AppPreferences {
   theme: 'light' | 'dark' | 'system';
   gradeRounding: number; // decimal places
@@ -142,4 +149,6 @@ export interface AppPreferences {
   colorTheme: string;
   /** Optional user-picked brand color (hex) overriding the theme's primary */
   customPrimary: string | null;
+  /** User-adjustable percentage bounds for displayed letter grades. */
+  letterScale: LetterScaleEntry[];
 }

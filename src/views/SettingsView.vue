@@ -40,6 +40,14 @@ function clearCustom() {
   store.setCustomPrimary(null)
 }
 
+function updateLetterBound(index: number, bound: 'lower' | 'upper', value: string) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return
+  const scale = store.preferences.letterScale.map((entry) => ({ ...entry }))
+  scale[index][bound] = number
+  store.setLetterScale(scale)
+}
+
 // Keep the text field in sync when the color picker or a theme click changes
 // the stored custom color.
 watch(
@@ -87,6 +95,20 @@ function clearAll() {
           <option :value="1">1</option>
           <option :value="2">2</option>
         </select>
+      </div>
+    </div>
+
+    <div class="card letter-scale-card" style="margin-bottom:1rem;max-width:620px">
+      <div class="letter-scale-title"><div><h2>Letter Scale</h2><p>Set the percentage range used for each displayed letter grade.</p></div><button class="btn btn-secondary btn-sm" @click="store.resetLetterScale">Reset</button></div>
+      <div class="table-wrap">
+        <table class="letter-scale-table">
+          <thead><tr><th>Letter</th><th>Lower</th><th>Upper</th></tr></thead>
+          <tbody><tr v-for="(entry, index) in store.preferences.letterScale" :key="entry.letter">
+            <td><span class="letter-token" :class="'grade-' + entry.letter">{{ entry.letter }}</span></td>
+            <td><input class="input" type="number" min="0" max="100" step="0.01" :value="entry.lower" @change="updateLetterBound(index, 'lower', ($event.target as HTMLInputElement).value)" /></td>
+            <td><input class="input" type="number" min="0" max="100" step="0.01" :value="entry.upper" @change="updateLetterBound(index, 'upper', ($event.target as HTMLInputElement).value)" /></td>
+          </tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -176,3 +198,7 @@ function clearAll() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.letter-scale-title { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }.letter-scale-title h2 { font-size:1rem; margin-bottom:.25rem; }.letter-scale-title p { color:var(--text-muted); font-size:.82rem; }.letter-scale-table .input { min-width:82px; padding:.4rem .55rem; }.letter-token { display:inline-grid; min-width:2.5rem; place-items:center; padding:.2rem .5rem; border:1px solid var(--border); border-radius:8px; font-weight:750; }.letter-token.grade-A { color:#166534; }.letter-token.grade-B { color:#1e40af; }.letter-token.grade-C { color:#854d0e; }.letter-token.grade-D { color:#9a3412; }.letter-token.grade-E { color:#991b1b; }
+</style>

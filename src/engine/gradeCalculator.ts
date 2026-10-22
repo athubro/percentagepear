@@ -11,6 +11,7 @@ import type {
   LetterGrade,
   TargetGradeResult,
   GradingModel,
+  LetterScaleEntry,
 } from '../types';
 
 /** Standard letter grade thresholds (common in many US high schools). Adjustable. */
@@ -22,9 +23,10 @@ export const LETTER_THRESHOLDS: { min: number; letter: LetterGrade }[] = [
   { min: 0, letter: 'E' },
 ];
 
-export function percentageToLetter(pct: number | null | undefined): LetterGrade {
+export function percentageToLetter(pct: number | null | undefined, scale?: LetterScaleEntry[]): LetterGrade {
   if (pct == null || Number.isNaN(pct)) return 'N/A';
-  for (const t of LETTER_THRESHOLDS) {
+  const thresholds = scale?.map((entry) => ({ min: entry.lower, letter: entry.letter })).sort((a, b) => b.min - a.min) ?? LETTER_THRESHOLDS;
+  for (const t of thresholds) {
     if (pct >= t.min) return t.letter;
   }
   return 'E';

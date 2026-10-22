@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type {
   AppMode,
   AppPreferences,
+  LetterScaleEntry,
   Course,
   Assignment,
   SimulationScenario,
@@ -35,6 +36,14 @@ import {
 } from '../styles/colorThemes';
 
 const STORAGE_KEY = 'percentagepear-state-v1';
+
+const DEFAULT_LETTER_SCALE: LetterScaleEntry[] = [
+  { letter: 'A', lower: 89.5, upper: 100 },
+  { letter: 'B', lower: 79.5, upper: 89.49 },
+  { letter: 'C', lower: 69.5, upper: 79.49 },
+  { letter: 'D', lower: 59.5, upper: 69.49 },
+  { letter: 'E', lower: 0, upper: 59.49 },
+];
 
 interface PersistedState {
   mode: AppMode;
@@ -76,6 +85,7 @@ export const useAppStore = defineStore('app', () => {
     defaultTargetLetter: 'A',
     colorTheme: DEFAULT_THEME_ID,
     customPrimary: null,
+    letterScale: DEFAULT_LETTER_SCALE.map((entry) => ({ ...entry })),
   });
 
   function bumpSim() {
@@ -162,9 +172,11 @@ export const useAppStore = defineStore('app', () => {
     const sim = getActiveSimulation(courseId);
     if (sim) {
       const simulated = applySimulation(course, sim.hypotheticalAssignments, sim.modifiedScores);
-      return calculateCourseGrade(course, simulated);
+      const grade = calculateCourseGrade(course, simulated);
+      return { ...grade, letter: percentageToLetter(grade.percentage, preferences.value.letterScale) };
     }
-    return calculateCourseGrade(course);
+    const grade = calculateCourseGrade(course);
+    return { ...grade, letter: percentageToLetter(grade.percentage, preferences.value.letterScale) };
   }
 
   function getGradeComparison(courseId: string) {
@@ -175,7 +187,12 @@ export const useAppStore = defineStore('app', () => {
     const simulated = sim
       ? applySimulation(course, sim.hypotheticalAssignments, sim.modifiedScores)
       : course.assignments.filter((a) => !a.isHypothetical);
-    return compareGrades(course, simulated);
+    const comparison = compareGrades(course, simulated);
+    return {
+      ...comparison,
+      original: { ...comparison.original, letter: percentageToLetter(comparison.original.percentage, preferences.value.letterScale) },
+      projected: { ...comparison.projected, letter: percentageToLetter(comparison.projected.percentage, preferences.value.letterScale) },
+    };
   }
 
   function createScenario(courseId: string, name: string) {
@@ -446,6 +463,20 @@ export const useAppStore = defineStore('app', () => {
     persist();
   }
 
+  function setLetterScale(scale: LetterScaleEntry[]) {
+    const valid = scale.length === DEFAULT_LETTER_SCALE.length && scale.every((entry) =>
+      Number.isFinite(entry.lower) && Number.isFinite(entry.upper) && entry.lower >= 0 && entry.upper <= 100 && entry.lower <= entry.upper
+    );
+    if (!valid) return;
+    preferences.value.letterScale = scale.map((entry) => ({ ...entry }));
+    bumpSim();
+    persist();
+  }
+
+  function resetLetterScale() {
+    setLetterScale(DEFAULT_LETTER_SCALE);
+  }
+
   loadPersisted();
   if (mode.value === 'guest' && courses.value.length === 0) {
     enterGuestMode();
@@ -491,6 +522,8 @@ export const useAppStore = defineStore('app', () => {
     setColorTheme,
     setCustomPrimary,
     resetColorTheme,
+    setLetterScale,
+    resetLetterScale,
     colorThemes: COLOR_THEMES,
     persist,
     percentageToLetter,

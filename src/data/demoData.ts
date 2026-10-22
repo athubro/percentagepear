@@ -239,6 +239,7 @@ export const DEMO_SCHEDULE: ScheduleEntry[] = DEMO_COURSES.map((c) => ({
   startTime: periodToTime(c.period as number).start,
   endTime: periodToTime(c.period as number).end,
   days: ['M', 'T', 'W', 'Th', 'F'],
+  semester: 1,
 }));
 
 function periodToTime(p: number): { start: string; end: string } {

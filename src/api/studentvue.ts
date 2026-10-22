@@ -402,11 +402,16 @@ function parseSchedule(data: any): ScheduleEntry[] {
   if (!data) return entries
   const all = data.studentClassScheduleForAllTerms || data.studentClassSchedule || data
   const blocks = all?.studentClassScheduleForTerms
-  const lists: any[] = []
+  const lists: { classItem: any; semester?: 1 | 2 }[] = []
   if (Array.isArray(blocks)) {
-    for (const t of blocks) if (Array.isArray(t.classLists)) lists.push(...t.classLists)
+    for (const t of blocks) {
+      const term = String(t.termName || t.term || t.schoolYear || '')
+      const semester = /(?:semester|sem)\s*2|\bS2\b/i.test(term) ? 2 : 1
+      if (Array.isArray(t.classLists)) lists.push(...t.classLists.map((classItem: any) => ({ classItem, semester })))
+    }
   } else if (Array.isArray(all?.classLists)) lists.push(...all.classLists)
-  lists.forEach((cl, i) => {
+  lists.forEach((item, i) => {
+    const cl = 'classItem' in item ? item.classItem : item
     entries.push({
       id: `sch-${i}`,
       courseId: `svue-c-${i}`,
@@ -417,6 +422,7 @@ function parseSchedule(data: any): ScheduleEntry[] {
       startTime: String(cl.startTime || ''),
       endTime: String(cl.endTime || ''),
       days: ['M', 'T', 'W', 'Th', 'F'],
+      semester: 'semester' in item ? item.semester : 1,
     })
   })
   return entries
