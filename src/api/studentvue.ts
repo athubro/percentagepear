@@ -410,19 +410,29 @@ function parseSchedule(data: any): ScheduleEntry[] {
       if (Array.isArray(t.classLists)) lists.push(...t.classLists.map((classItem: any) => ({ classItem, semester })))
     }
   } else if (Array.isArray(all?.classLists)) lists.push(...all.classLists)
+  let inferredSemester: 1 | 2 = 1
+  let previousPeriod: number | null = null
   lists.forEach((item, i) => {
     const cl = 'classItem' in item ? item.classItem : item
+    const rawPeriod = String(cl.period ?? i + 1)
+    const numericPeriod = Number(rawPeriod)
+    // Some StudentVUE districts return both semesters as one flat list. The
+    // second list begins again at period 0/1, so a period reset is its boundary.
+    if (previousPeriod != null && Number.isFinite(numericPeriod) && numericPeriod < previousPeriod) {
+      inferredSemester = 2
+    }
+    if (Number.isFinite(numericPeriod)) previousPeriod = numericPeriod
     entries.push({
       id: `sch-${i}`,
       courseId: `svue-c-${i}`,
       courseName: String(cl.courseTitle || cl.title || `Period ${i + 1}`),
       teacherName: String(cl.teacher || ''),
-      period: String(cl.period ?? i + 1),
+      period: rawPeriod,
       room: String(cl.roomName || cl.room || ''),
       startTime: String(cl.startTime || ''),
       endTime: String(cl.endTime || ''),
       days: ['M', 'T', 'W', 'Th', 'F'],
-      semester: 'semester' in item ? item.semester : 1,
+      semester: 'semester' in item ? item.semester : inferredSemester,
     })
   })
   return entries

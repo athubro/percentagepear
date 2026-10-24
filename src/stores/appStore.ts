@@ -285,7 +285,7 @@ export const useAppStore = defineStore('app', () => {
     };
     scenarios.value = touchScenarios(scenarios.value, scenario.id, (s) => ({
       ...s,
-      hypotheticalAssignments: [...s.hypotheticalAssignments, assignment],
+      hypotheticalAssignments: [assignment, ...s.hypotheticalAssignments],
       updatedAt: new Date().toISOString(),
     }));
     activeScenarioId.value = scenario.id;

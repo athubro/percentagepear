@@ -223,7 +223,8 @@ export function applySimulation(
     }
     return { ...a };
   });
-  return [...base, ...hypotheticals];
+  // Hypothetical (what-if) assignments surface at the top of the list.
+  return [...hypotheticals, ...base];
 }
 
 /**
