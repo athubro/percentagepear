@@ -29,7 +29,7 @@ const all = computed(() => {
         <h1>All Assignments</h1>
         <p>Across every course · click a row to open the gradebook</p>
       </div>
-      <select v-model="filter" class="select mobile-full-select" style="max-width:180px">
+      <select v-model="filter" class="select" style="max-width:180px">
         <option value="all">All</option>
         <option value="upcoming">Upcoming</option>
         <option value="missing">Missing</option>
