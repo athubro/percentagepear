@@ -30,6 +30,10 @@ watch(
 
 const course = computed(() => store.getCourse(selectedId.value))
 const comparison = computed(() => { void store.simVersion; return store.getGradeComparison(selectedId.value) })
+const courseGrade = computed(() => {
+  if (!course.value) return null
+  return store.getCourseGrade(course.value.id)
+})
 const assignments = computed(() => {
   void store.simVersion
   let list = store.getSimulatedAssignments(selectedId.value)
@@ -134,18 +138,8 @@ function catName(id: string) {
           Model: {{ comparison.projected.method === 'weighted_categories' ? 'Weighted categories' : 'Total points' }}
         </div>
       </div>
-      <div v-if="comparison.projected.byCategory.length" style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:0.75rem">
-        <div
-          v-for="cat in comparison.projected.byCategory"
-          :key="cat.categoryId"
-          style="font-size:0.8rem;padding:0.35rem 0.6rem;background:var(--bg);border-radius:6px;border:1px solid var(--border)"
-        >
-          <strong>{{ cat.name }}</strong> ({{ cat.weight }}%):
-          {{ formatGrade(cat.percentage, 1) }}%
-          · {{ cat.earned }}/{{ cat.possible }}
-        </div>
-      </div>
     </div>
+
 
     <!-- Scenario switcher -->
     <div v-if="scenariosForCourse.length" style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
@@ -174,6 +168,28 @@ function catName(id: string) {
         <option value="upcoming">Upcoming</option>
         <option value="hypothetical">Hypothetical</option>
       </select>
+    </div>
+
+    <!-- Grade bars -->
+    <div v-if="courseGrade" class="grade-bars">
+      <div class="bar-section">
+        <div class="bar-track">
+          <div class="bar-fill bar-total" :style="{ width: courseGrade.percentage + '%' }">
+            Total
+          </div>
+        </div>
+      </div>
+      <div v-for="cat in courseGrade.byCategory" :key="cat.categoryId" class="bar-section">
+        <div class="bar-track">
+          <div
+            class="bar-fill"
+            :class="cat.percentage >= 95 ? 'bar-green' : 'bar-blue'"
+            :style="{ width: cat.percentage + '%' }"
+          >
+            {{ cat.name }} ({{ formatGrade(cat.percentage, 2) }}%) - {{ cat.earned }}/{{ cat.possible }}
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Assignment table -->
@@ -252,4 +268,28 @@ function catName(id: string) {
 <style scoped>
 .gradebook-header { margin-bottom:1rem; }.back-to-classes { border:0; background:none; color:var(--primary); cursor:pointer; font-size:.85rem; font-weight:650; padding:0; margin-bottom:.35rem; }.course-actions { display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; }.new-assignment-row td { background:var(--primary-soft); vertical-align:middle; }.score-input { width:4.25rem; display:inline-block; padding:.35rem; }.points-input { width:3.75rem; display:inline-block; padding:.35rem; }.score-divider { color:var(--text-muted); }.draft-actions { white-space:nowrap; }
 @media (max-width:700px) { .assignment-table table { font-size:.82rem; }.assignment-table th:nth-child(3),.assignment-table td:nth-child(3),.assignment-table th:nth-child(5),.assignment-table td:nth-child(5) { display:none; }.assignment-table th,.assignment-table td { padding:.55rem .4rem; }.assignment-table th:nth-child(1) { min-width:130px; }.assignment-table th:nth-child(2) { min-width:94px; }.assignment-table .input { max-width:100%; }.new-assignment-row td:nth-child(4) { min-width:130px; }.draft-actions .btn { padding:.3rem .4rem; }.course-actions { width:100%; }.course-actions .btn-secondary { flex:1; justify-content:center; } }
+/* Grade bars — imitate reference design */
+.grade-bars { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.25rem; }
+.bar-section { width:100%; }
+.bar-track {
+  height:36px;
+  background:#e5e7eb;
+  border-radius:18px;
+  overflow:hidden;
+}
+.bar-fill {
+  height:100%;
+  color:#fff;
+  font-weight:600;
+  font-size:0.9rem;
+  display:flex;
+  align-items:center;
+  padding-left:12px;
+  border-radius:18px;
+  transition:width 0.3s ease;
+}
+.bar-total { background:#6b93f0; }
+.bar-blue { background:#6b93f0; }
+.bar-green { background:#2ecc71; }
+
 </style>
